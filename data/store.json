@@ -1,0 +1,82 @@
+{
+  "payment": {
+    "currency": "USD",
+    "supportEmail": "tickets@cupvault.com",
+    "checkoutNote": "After submitting your order, you will receive payment instructions within 24 hours. Tickets are delivered digitally before match day.",
+    "methods": [
+      {
+        "id": "bank_transfer",
+        "label": "Bank Transfer (Wire / ACH)",
+        "enabled": true,
+        "details": {
+          "bankName": "Your Bank Name",
+          "accountName": "CupVault Tickets LLC",
+          "accountNumber": "****1234",
+          "routingNumber": "****5678",
+          "swiftCode": "XXXXXXXX",
+          "instructions": "Include your order reference in the transfer memo."
+        }
+      },
+      {
+        "id": "paypal",
+        "label": "PayPal",
+        "enabled": false,
+        "details": {
+          "email": "payments@cupvault.com",
+          "instructions": "Send payment to the PayPal address above with your order reference."
+        }
+      },
+      {
+        "id": "crypto",
+        "label": "Cryptocurrency (USDT / BTC)",
+        "enabled": false,
+        "details": {
+          "walletAddress": "",
+          "network": "TRC20",
+          "instructions": "Contact support for wallet details before sending."
+        }
+      },
+      {
+        "id": "card",
+        "label": "Credit / Debit Card",
+        "enabled": false,
+        "details": {
+          "provider": "Stripe",
+          "paymentLink": "",
+          "instructions": "You will be redirected to our secure payment page."
+        }
+      }
+    ]
+  },
+  "tierPrices": {
+    "default": {
+      "category-1": 620,
+      "category-2": 400,
+      "category-3": 200,
+      "vip-lounge": 3000,
+      "trophy-lounge": 3200,
+      "pitchside-lounge": 3350,
+      "champions-club": 2100,
+      "fifa-pavilion": 1400,
+      "private-suite": 43200,
+      "platinum": 9150
+    },
+    "byMatchSlug": {}
+  },
+  "tierStock": {
+    "default": {
+      "category-1": 6,
+      "category-2": 12,
+      "category-3": 24,
+      "vip-lounge": 4,
+      "trophy-lounge": 4,
+      "pitchside-lounge": 2,
+      "champions-club": 8,
+      "fifa-pavilion": 10,
+      "private-suite": 1,
+      "platinum": 2
+    },
+    "byMatchSlug": {}
+  },
+  "lastFixtureSync": null
+}

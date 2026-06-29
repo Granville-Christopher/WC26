@@ -1,0 +1,37 @@
+import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/auth";
+import { readStore, writeStore } from "@/lib/store";
+import type { PaymentSettings, StoreData } from "@/types";
+
+export async function GET() {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const store = await readStore();
+  return NextResponse.json({
+    payment: store.payment,
+    tierPrices: store.tierPrices,
+    tierStock: store.tierStock,
+    lastFixtureSync: store.lastFixtureSync,
+  });
+}
+
+export async function PUT(request: Request) {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json()) as {
+    payment?: PaymentSettings;
+    tierPrices?: StoreData["tierPrices"];
+    tierStock?: StoreData["tierStock"];
+  };
+
+  const store = await readStore();
+  if (body.payment) store.payment = body.payment;
+  if (body.tierPrices) store.tierPrices = body.tierPrices;
+  if (body.tierStock) store.tierStock = body.tierStock;
+  await writeStore(store);
+
+  return NextResponse.json({ success: true });
+}
