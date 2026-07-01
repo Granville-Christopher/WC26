@@ -14,10 +14,14 @@ const TEAM_FLAG_CODES: Record<string, string> = {
   Colombia: "co",
   "Congo - Kinshasa": "cd",
   "Congo DRC": "cd",
+  "DR Congo": "cd",
   "Côte d'Ivoire": "ci",
+  "Ivory Coast": "ci",
   Croatia: "hr",
   Curaçao: "cw",
+  Curacao: "cw",
   "Czech Republic": "cz",
+  Czechia: "cz",
   Ecuador: "ec",
   Egypt: "eg",
   England: "gb-eng",
@@ -57,8 +61,14 @@ const TEAM_FLAG_CODES: Record<string, string> = {
 };
 
 export function getTeamFlagCode(team: string): string | null {
-  if (!team || team === "TBD" || /^[WL]\d+/.test(team)) return null;
-  return TEAM_FLAG_CODES[team] ?? null;
+  if (!team || team === "TBD" || /^[WL]\d+$/i.test(team.trim())) return null;
+
+  const trimmed = team.trim();
+  if (TEAM_FLAG_CODES[trimmed]) return TEAM_FLAG_CODES[trimmed];
+
+  const lower = trimmed.toLowerCase();
+  const hit = Object.entries(TEAM_FLAG_CODES).find(([name]) => name.toLowerCase() === lower);
+  return hit?.[1] ?? null;
 }
 
 export function getFlagUrl(team: string, width = 80): string | null {

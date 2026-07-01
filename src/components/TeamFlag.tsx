@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { getFlagUrl } from "@/lib/team-flags";
 
 export function TeamFlag({
@@ -10,13 +9,14 @@ export function TeamFlag({
   size?: number;
   className?: string;
 }) {
-  const url = getFlagUrl(team, size);
+  const url = getFlagUrl(team, size * 2);
+  const height = Math.round(size * 0.67);
 
   if (!url) {
     return (
       <div
         className={`flex shrink-0 items-center justify-center rounded bg-white/20 text-[10px] font-bold text-white ${className}`}
-        style={{ width: size, height: Math.round(size * 0.67) }}
+        style={{ width: size, height }}
       >
         TBD
       </div>
@@ -24,11 +24,15 @@ export function TeamFlag({
   }
 
   return (
-    <Image
+    // Native img — avoids Next.js image optimizer blocking external flag CDN
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={url}
       alt={`${team} flag`}
       width={size}
-      height={Math.round(size * 0.67)}
+      height={height}
+      loading="lazy"
+      decoding="async"
       className={`shrink-0 rounded-sm object-cover shadow-md ring-1 ring-white/30 ${className}`}
     />
   );

@@ -1,9 +1,15 @@
-/** Official FIFA World Cup 26 hospitality hero images (Webflow CDN) */
+/** Official FIFA World Cup 26 hospitality hero images */
 export const FIFA_HERO = {
-  /** Portrait — player action shot (788×1000) */
+  /** Portrait — player action shot */
+  portrait: "/images/hero/portrait.webp",
+  /** Wide — stadium crowd atmosphere */
+  stadium: "/images/hero/stadium.webp",
+};
+
+/** Remote CDN fallbacks (used if local files missing) */
+export const FIFA_HERO_CDN = {
   portrait:
     "https://cdn.prod.website-files.com/689fd0a66c26ce8fe1446c25/69d95f1cd329a58ab5240e4b_FWC26_Ecomm_Photo_Update_A_788x1000.webp",
-  /** Wide — stadium crowd atmosphere (1000×720) */
   stadium:
     "https://cdn.prod.website-files.com/689fd0a66c26ce8fe1446c25/69d95f4c71d00684ba1d8e76_FWC26_Ecomm_Photo_Update_B_1000x720.webp",
 };
