@@ -1,4 +1,4 @@
-/** Map team names to ISO 3166-1 alpha-2 for flagcdn.com */
+/** Map team names to ISO 3166-1 alpha-2 for flags */
 const TEAM_FLAG_CODES: Record<string, string> = {
   Algeria: "dz",
   Argentina: "ar",
@@ -71,8 +71,28 @@ export function getTeamFlagCode(team: string): string | null {
   return hit?.[1] ?? null;
 }
 
-export function getFlagUrl(team: string, width = 80): string | null {
+function localFlagPath(code: string): string {
+  if (code.includes("-")) return `/flags/${code}.png`;
+  return `/flags/${code}.svg`;
+}
+
+function cdnFlagUrls(code: string): string[] {
+  const urls: string[] = [];
+  if (!code.includes("-")) {
+    urls.push(`https://hatscripts.github.io/circle-flags/flags/${code}.svg`);
+  }
+  urls.push(`https://flagcdn.com/w160/${code}.png`);
+  return urls;
+}
+
+/** Local file first, then CDN fallbacks — most reliable on Vercel */
+export function getFlagSources(team: string): string[] | null {
   const code = getTeamFlagCode(team);
   if (!code) return null;
-  return `https://flagcdn.com/w${width}/${code}.png`;
+  return [localFlagPath(code), ...cdnFlagUrls(code)];
+}
+
+export function getFlagUrl(team: string, _width = 80): string | null {
+  const sources = getFlagSources(team);
+  return sources?.[0] ?? null;
 }

@@ -1,4 +1,7 @@
-import { getFlagUrl } from "@/lib/team-flags";
+"use client";
+
+import { useState } from "react";
+import { getFlagSources } from "@/lib/team-flags";
 
 export function TeamFlag({
   team,
@@ -9,31 +12,37 @@ export function TeamFlag({
   size?: number;
   className?: string;
 }) {
-  const url = getFlagUrl(team, size * 2);
-  const height = Math.round(size * 0.67);
+  const sources = getFlagSources(team);
+  const [srcIndex, setSrcIndex] = useState(0);
 
-  if (!url) {
+  if (!sources) {
     return (
       <div
-        className={`flex shrink-0 items-center justify-center rounded bg-white/20 text-[10px] font-bold text-white ${className}`}
-        style={{ width: size, height }}
+        className={`flex shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold text-white ${className}`}
+        style={{ width: size, height: size }}
       >
         TBD
       </div>
     );
   }
 
+  const src = sources[srcIndex] ?? sources[0];
+
   return (
-    // Native img — avoids Next.js image optimizer blocking external flag CDN
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={url}
+      src={src}
       alt={`${team} flag`}
       width={size}
-      height={height}
+      height={size}
       loading="lazy"
       decoding="async"
-      className={`shrink-0 rounded-sm object-cover shadow-md ring-1 ring-white/30 ${className}`}
+      referrerPolicy="no-referrer"
+      className={`shrink-0 rounded-full bg-white/10 object-cover shadow-md ring-2 ring-white/40 ${className}`}
+      style={{ width: size, height: size, minWidth: size, minHeight: size }}
+      onError={() => {
+        if (srcIndex < sources.length - 1) setSrcIndex((i) => i + 1);
+      }}
     />
   );
 }
@@ -47,7 +56,7 @@ export function MatchTeamsRow({
   awayTeam: string;
   compact?: boolean;
 }) {
-  const flagSize = compact ? 32 : 44;
+  const flagSize = compact ? 36 : 48;
 
   return (
     <div className="flex items-center justify-center gap-2 sm:gap-3">
