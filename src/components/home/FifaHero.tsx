@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CountdownTimer } from "@/components/CountdownTimer";
-import { HOST_CITIES, TEAMS } from "@/data/fifa-home";
+import { HeroTeamSelect } from "@/components/home/HeroTeamSelect";
+import { HOST_CITIES } from "@/data/fifa-home";
+import { WC26_TEAMS } from "@/data/wc-teams";
 import { FIFA_HERO, FIFA_HERO_CDN } from "@/data/home-images";
+import { worldCupFilterUrl } from "@/lib/world-cup-url";
+import { getFlagUrl } from "@/lib/team-flags";
 
 /** Soft radial blend from center — no hard edges, spreads to both sides */
 const HERO_BLEND =
@@ -38,8 +43,13 @@ function HeroEdgeImage({
 }
 
 export function FifaHero() {
+  const router = useRouter();
   const [browseMode, setBrowseMode] = useState<"city" | "team">("city");
   const [mounted, setMounted] = useState(false);
+
+  function goMatches(params: { country?: string; stage?: string; q?: string }) {
+    router.push(worldCupFilterUrl(params));
+  }
 
   useEffect(() => {
     setMounted(true);
@@ -90,10 +100,10 @@ export function FifaHero() {
             </p>
           </div>
 
-          <form
-            action="/world-cup"
-            method="get"
-            className={`mx-auto mt-8 max-w-2xl space-y-3 ${mounted ? "animate-fade-up" : "opacity-0"}`}
+          <div
+            className={`relative z-30 mx-auto mt-8 max-w-2xl space-y-3 ${
+              mounted ? "animate-fade-up" : "pointer-events-none opacity-0"
+            }`}
             style={{ animationDelay: "0.2s" }}
           >
             <div className="grid gap-3 sm:grid-cols-3">
@@ -102,9 +112,9 @@ export function FifaHero() {
                   Location
                 </label>
                 <select
-                  name="country"
                   className="w-full rounded-sm border-0 bg-white px-3 py-3 text-sm text-slate-800 shadow-md outline-none"
                   defaultValue="all"
+                  onChange={(e) => goMatches({ country: e.target.value })}
                 >
                   <option value="all">Select match location</option>
                   <option value="USA">United States</option>
@@ -116,20 +126,16 @@ export function FifaHero() {
                 <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-blue-200">
                   Team
                 </label>
-                <input
-                  name="q"
-                  placeholder="Select your team"
-                  className="w-full rounded-sm border-0 bg-white px-3 py-3 text-sm text-slate-800 shadow-md outline-none placeholder:text-slate-400"
-                />
+                <HeroTeamSelect onSelect={(team) => goMatches({ q: team })} />
               </div>
               <div className="text-left">
                 <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-blue-200">
                   Stage
                 </label>
                 <select
-                  name="stage"
                   className="w-full rounded-sm border-0 bg-white px-3 py-3 text-sm text-slate-800 shadow-md outline-none"
                   defaultValue="all"
+                  onChange={(e) => goMatches({ stage: e.target.value })}
                 >
                   <option value="all">Select stage</option>
                   <option value="group">Group Stage</option>
@@ -147,10 +153,10 @@ export function FifaHero() {
             >
               Browse All Matches
             </Link>
-          </form>
+          </div>
 
           <div
-            className={`mx-auto mt-10 max-w-2xl ${mounted ? "animate-fade-up" : "opacity-0"}`}
+            className={`relative z-10 mx-auto mt-10 max-w-2xl ${mounted ? "animate-fade-up" : "opacity-0"}`}
             style={{ animationDelay: "0.35s" }}
           >
             <p className="mb-3 text-xs font-bold uppercase tracking-widest text-blue-200">Browse</p>
@@ -173,23 +179,32 @@ export function FifaHero() {
             <div className="flex max-h-28 flex-wrap justify-center gap-2 overflow-y-auto pb-2">
               {browseMode === "city"
                 ? HOST_CITIES.map((city) => (
-                    <Link
+                    <button
                       key={city.slug}
-                      href={`/world-cup?q=${encodeURIComponent(city.name)}`}
+                      type="button"
+                      onClick={() => goMatches({ q: city.filterQuery })}
                       className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-white ring-1 ring-white/20 transition hover:bg-white/25"
                     >
                       {city.name}
-                    </Link>
+                    </button>
                   ))
-                : TEAMS.map((team) => (
-                    <Link
-                      key={team.code}
-                      href={`/world-cup?q=${encodeURIComponent(team.name)}`}
-                      className="rounded-full bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white ring-1 ring-white/20 transition hover:bg-white/25"
-                    >
-                      {team.code}
-                    </Link>
-                  ))}
+                : WC26_TEAMS.map((team) => {
+                    const flag = getFlagUrl(team, 32);
+                    return (
+                      <button
+                        key={team}
+                        type="button"
+                        onClick={() => goMatches({ q: team })}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white ring-1 ring-white/20 transition hover:bg-white/25"
+                      >
+                        {flag && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={flag} alt="" className="h-4 w-4 rounded-full object-cover" />
+                        )}
+                        {team}
+                      </button>
+                    );
+                  })}
             </div>
           </div>
       </div>

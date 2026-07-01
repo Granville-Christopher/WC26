@@ -1,4 +1,6 @@
 /** Official FIFA World Cup 26 hospitality hero images */
+export const WC26_LOGO = "/images/wc26-logo.svg";
+
 export const FIFA_HERO = {
   /** Portrait — player action shot */
   portrait: "/images/hero/portrait.webp",
