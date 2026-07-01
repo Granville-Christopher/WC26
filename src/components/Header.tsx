@@ -27,32 +27,44 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-8">
-        <Link href="/" className="flex shrink-0 items-center" onClick={() => setMenuOpen(false)}>
+      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-3 py-3 lg:px-4 xl:px-5">
+        <Link
+          href="/"
+          className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5"
+          onClick={() => setMenuOpen(false)}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/wc26-logo.svg"
             alt="FIFA World Cup 2026™"
-            className="h-9 w-auto sm:h-10 lg:h-11"
+            className="h-8 w-auto shrink-0 sm:h-9 lg:h-10"
           />
+          <div className="hidden min-w-0 leading-tight sm:block">
+            <p className="truncate text-xs font-bold text-[#003087] lg:text-sm">
+              FIFA World Cup 2026™
+            </p>
+            <p className="truncate text-[9px] font-semibold uppercase tracking-wider text-slate-500 lg:text-[10px]">
+              Official Hospitality
+            </p>
+          </div>
         </Link>
 
-        <nav className="hidden items-center gap-6 lg:flex">
+        <nav className="hidden flex-1 items-center justify-center gap-x-8 gap-y-1 px-4 xl:gap-x-10 lg:flex">
           {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-slate-700 transition hover:text-[#003087]"
+              className="whitespace-nowrap text-sm font-medium text-slate-700 transition hover:text-[#003087]"
             >
               {item.label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <a
             href="tel:+18446521685"
-            className="hidden items-center gap-1.5 text-sm font-semibold text-[#003087] md:flex"
+            className="hidden items-center gap-1.5 text-sm font-semibold text-[#003087] xl:flex"
           >
             <Phone className="h-4 w-4" />
             +1-844-652-1685
@@ -85,7 +97,7 @@ export function Header() {
             onClick={() => setMenuOpen(false)}
           />
           <nav className="absolute left-0 right-0 top-full z-50 border-b border-slate-200 bg-white shadow-lg lg:hidden">
-            <div className="mx-auto max-w-7xl px-4 py-4">
+            <div className="mx-auto max-w-[1600px] px-3 py-4 lg:px-4">
               <ul className="flex flex-col gap-1">
                 {NAV.map((item) => (
                   <li key={item.href}>
