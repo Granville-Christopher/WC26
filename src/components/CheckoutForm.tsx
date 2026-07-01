@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { formatPrice, formatDate, formatTime } from "@/lib/utils";
-import type { PaymentMethod, PaymentSettings } from "@/types";
-import type { WorldCupMatch, TierId } from "@/types";
+import { PaymentDetails } from "@/components/PaymentDetails";
+import type { PaymentMethod, PaymentSettings, WorldCupMatch, TierId } from "@/types";
 
 interface CheckoutPageProps {
   match: WorldCupMatch;
@@ -61,6 +61,8 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
     if (res.ok) setOrder(data);
   }
 
+  const selectedMethod = payment?.methods.find((m) => m.id === methodId);
+
   if (order) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12">
@@ -72,20 +74,12 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
             Total: {formatPrice(order.total, match.currency)}
           </p>
 
-          <div className="mt-8 rounded-xl bg-slate-50 p-6 text-left text-sm">
-            <h3 className="font-semibold text-slate-900">Payment: {order.paymentMethod.label}</h3>
-            {Object.entries(order.paymentMethod.details).map(([k, v]) =>
-              v ? (
-                <p key={k} className="mt-1 text-slate-600">
-                  <span className="capitalize text-slate-500">{k.replace(/([A-Z])/g, " $1")}: </span>
-                  {String(v)}
-                </p>
-              ) : null
-            )}
+          <div className="mt-8 text-left">
+            <PaymentDetails method={order.paymentMethod} />
             {order.checkoutNote && (
-              <p className="mt-4 text-slate-600">{order.checkoutNote}</p>
+              <p className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-slate-600">{order.checkoutNote}</p>
             )}
-            <p className="mt-4 text-slate-500">
+            <p className="mt-4 text-sm text-slate-500">
               Questions? Contact{" "}
               <a href={`mailto:${order.supportEmail}`} className="text-emerald-600">
                 {order.supportEmail}
@@ -186,6 +180,11 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
                     <span className="font-medium">{m.label}</span>
                   </label>
                 ))}
+                {selectedMethod && (
+                  <div className="mt-4">
+                    <PaymentDetails method={selectedMethod} />
+                  </div>
+                )}
               </div>
             )}
           </div>

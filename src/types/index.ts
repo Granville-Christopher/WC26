@@ -77,6 +77,8 @@ export interface PaymentMethodDetails {
   email?: string;
   walletAddress?: string;
   network?: string;
+  coin?: string;
+  qrCodeUrl?: string;
   provider?: string;
   paymentLink?: string;
   instructions?: string;

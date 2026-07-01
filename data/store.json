@@ -29,11 +29,13 @@
       {
         "id": "crypto",
         "label": "Cryptocurrency (USDT / BTC)",
-        "enabled": false,
+        "enabled": true,
         "details": {
+          "coin": "USDT",
           "walletAddress": "",
           "network": "TRC20",
-          "instructions": "Contact support for wallet details before sending."
+          "qrCodeUrl": "",
+          "instructions": "Send the exact order total and include your order reference in the memo."
         }
       },
       {

@@ -12,6 +12,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { HOSPITALITY_TIERS } from "@/data/tiers";
+import { AdminPaymentMethodCard } from "@/components/admin/AdminPaymentMethodCard";
 import type { PaymentMethod, PaymentSettings, StoreData } from "@/types";
 
 interface AdminMatch {
@@ -266,39 +267,17 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </div>
 
             {payment.methods.map((method: PaymentMethod, i: number) => (
-              <div key={method.id} className="rounded-2xl border border-white/10 bg-slate-900 p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <input
-                    value={method.label}
-                    onChange={(e) => {
-                      const methods = [...payment.methods];
-                      methods[i] = { ...methods[i], label: e.target.value };
-                      setPayment({ ...payment, methods });
-                    }}
-                    className="bg-transparent text-lg font-semibold outline-none"
-                  />
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={method.enabled}
-                      onChange={(e) => updateMethod(i, "enabled", e.target.checked)}
-                    />
-                    Enabled
-                  </label>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {Object.entries(method.details).map(([key, val]) => (
-                    <label key={key} className="block">
-                      <span className="text-xs uppercase tracking-wider text-slate-500">{key}</span>
-                      <input
-                        value={String(val ?? "")}
-                        onChange={(e) => updateMethod(i, key, e.target.value)}
-                        className="mt-1 w-full rounded-lg border border-white/10 bg-slate-800 px-3 py-2 text-sm"
-                      />
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <AdminPaymentMethodCard
+                key={method.id}
+                method={method}
+                onUpdate={(field, value) => updateMethod(i, field, value)}
+                onToggleEnabled={(enabled) => updateMethod(i, "enabled", enabled)}
+                onLabelChange={(label) => {
+                  const methods = [...payment.methods];
+                  methods[i] = { ...methods[i], label };
+                  setPayment({ ...payment, methods });
+                }}
+              />
             ))}
 
             <div className="flex gap-3">
