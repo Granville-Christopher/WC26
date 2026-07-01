@@ -39,11 +39,11 @@ export function Header() {
             alt="FIFA World Cup 2026™"
             className="h-8 w-auto shrink-0 sm:h-9 lg:h-10"
           />
-          <div className="hidden min-w-0 leading-tight sm:block">
-            <p className="truncate text-xs font-bold text-[#003087] lg:text-sm">
+          <div className="min-w-0 max-w-[40vw] leading-tight sm:max-w-none">
+            <p className="truncate text-[10px] font-bold text-[#003087] sm:text-xs lg:text-sm">
               FIFA World Cup 2026™
             </p>
-            <p className="truncate text-[9px] font-semibold uppercase tracking-wider text-slate-500 lg:text-[10px]">
+            <p className="truncate text-[8px] font-semibold uppercase tracking-wider text-slate-500 sm:text-[9px] lg:text-[10px]">
               Official Hospitality
             </p>
           </div>
