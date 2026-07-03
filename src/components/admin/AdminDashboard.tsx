@@ -97,7 +97,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payment }),
       });
-      setMessage(res.ok ? "Payment settings saved." : "Failed to save.");
+      if (res.ok) {
+        setMessage("Payment settings saved.");
+      } else {
+        const data = await safeJson<{ error?: string }>(res);
+        setMessage(data.error ?? "Failed to save.");
+      }
     } catch {
       setMessage("Failed to save.");
     } finally {
@@ -136,7 +141,8 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         setMessage("Prices updated successfully.");
         await load();
       } else {
-        setMessage("Failed to update prices.");
+        const data = await safeJson<{ error?: string }>(res);
+        setMessage(data.error ?? "Failed to update prices.");
       }
     } catch {
       setMessage("Failed to update prices.");
@@ -260,7 +266,13 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {message && (
-          <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <div
+            className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
+              /fail|could not|error|not writable/i.test(message)
+                ? "border-red-500/30 bg-red-500/10 text-red-300"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+            }`}
+          >
             {message}
           </div>
         )}

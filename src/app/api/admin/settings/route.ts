@@ -27,11 +27,23 @@ export async function PUT(request: Request) {
     tierStock?: StoreData["tierStock"];
   };
 
-  const store = await readStore();
-  if (body.payment) store.payment = body.payment;
-  if (body.tierPrices) store.tierPrices = body.tierPrices;
-  if (body.tierStock) store.tierStock = body.tierStock;
-  await writeStore(store);
-
-  return NextResponse.json({ success: true });
+  try {
+    const store = await readStore();
+    if (body.payment) store.payment = body.payment;
+    if (body.tierPrices) store.tierPrices = body.tierPrices;
+    if (body.tierStock) store.tierStock = body.tierStock;
+    await writeStore(store);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to save settings:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      {
+        error:
+          "Could not save. Storage is not writable — on Vercel, link a Blob store (Storage → Blob) so BLOB_READ_WRITE_TOKEN is set, then redeploy.",
+        detail: message,
+      },
+      { status: 500 }
+    );
+  }
 }

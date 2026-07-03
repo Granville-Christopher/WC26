@@ -49,28 +49,41 @@ export async function PATCH(request: Request) {
     updateDefaults?: boolean;
   };
 
-  const store = await readStore();
+  try {
+    const store = await readStore();
 
-  if (body.updateDefaults && body.prices) {
-    store.tierPrices.default = { ...store.tierPrices.default, ...body.prices };
-  }
-  if (body.updateDefaults && body.stock) {
-    store.tierStock.default = { ...store.tierStock.default, ...body.stock };
-  }
+    if (body.updateDefaults && body.prices) {
+      store.tierPrices.default = { ...store.tierPrices.default, ...body.prices };
+    }
+    if (body.updateDefaults && body.stock) {
+      store.tierStock.default = { ...store.tierStock.default, ...body.stock };
+    }
 
-  if (body.slug && body.prices) {
-    store.tierPrices.byMatchSlug[body.slug] = {
-      ...store.tierPrices.byMatchSlug[body.slug],
-      ...body.prices,
-    };
-  }
-  if (body.slug && body.stock) {
-    store.tierStock.byMatchSlug[body.slug] = {
-      ...store.tierStock.byMatchSlug[body.slug],
-      ...body.stock,
-    };
-  }
+    if (body.slug && body.prices) {
+      store.tierPrices.byMatchSlug[body.slug] = {
+        ...store.tierPrices.byMatchSlug[body.slug],
+        ...body.prices,
+      };
+    }
+    if (body.slug && body.stock) {
+      store.tierStock.byMatchSlug[body.slug] = {
+        ...store.tierStock.byMatchSlug[body.slug],
+        ...body.stock,
+      };
+    }
 
-  await writeStore(store);
-  return NextResponse.json({ success: true });
+    await writeStore(store);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to save prices:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      {
+        error:
+          "Could not save. Storage is not writable — on Vercel, link a Blob store (Storage → Blob) so BLOB_READ_WRITE_TOKEN is set, then redeploy.",
+        detail: message,
+      },
+      { status: 500 }
+    );
+  }
 }
