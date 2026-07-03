@@ -3,6 +3,17 @@ import { get, list, put } from "@vercel/blob";
 
 const STORE_BLOB_PATH = "cupvault/store.json";
 
+/**
+ * A Blob store's access mode (public/private) is fixed when the store is
+ * created and cannot be mixed. Set BLOB_ACCESS to match the store you linked
+ * in Vercel. Defaults to "public".
+ *   - public:  files are served via their direct Blob URL (no proxy).
+ *   - private: files are streamed through our /api/blob proxy route.
+ */
+function blobAccess(): "public" | "private" {
+  return process.env.BLOB_ACCESS?.trim() === "private" ? "private" : "public";
+}
+
 export function hasBlobStorage(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
@@ -10,7 +21,7 @@ export function hasBlobStorage(): boolean {
 export async function readJsonBlob<T>(pathname: string): Promise<T | null> {
   if (!hasBlobStorage()) return null;
 
-  const result = await get(pathname, { access: "private" });
+  const result = await get(pathname, { access: blobAccess() });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
 
   const text = await new Response(result.stream).text();
@@ -19,7 +30,7 @@ export async function readJsonBlob<T>(pathname: string): Promise<T | null> {
 
 export async function writeJsonBlob(pathname: string, data: unknown): Promise<void> {
   await put(pathname, JSON.stringify(data, null, 2), {
-    access: "private",
+    access: blobAccess(),
     contentType: "application/json",
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -39,32 +50,32 @@ export async function listJsonBlobs<T>(prefix: string): Promise<T[]> {
 }
 
 /**
- * Uploads a file (image/PDF) to the private Blob store and returns a relative
- * proxy URL that streams it back through our own API route. We use private
- * access everywhere because a Blob store's access mode is fixed at creation —
- * mixing public and private on one store is not possible.
+ * Uploads a file (image/PDF) to the Blob store. For public stores it returns
+ * the direct Blob URL; for private stores it returns a proxy URL served by our
+ * /api/blob route.
  */
 export async function uploadBlobFile(
   pathname: string,
   body: Buffer | ArrayBuffer,
   contentType: string
 ): Promise<string> {
-  await put(pathname, body, {
-    access: "private",
+  const blob = await put(pathname, body, {
+    access: blobAccess(),
     contentType,
     addRandomSuffix: false,
     allowOverwrite: true,
   });
-  return `/api/blob/${pathname}`;
+
+  return blobAccess() === "public" ? blob.url : `/api/blob/${pathname}`;
 }
 
-/** Streams a private blob's contents. Returns null if not found. */
+/** Streams a blob's contents. Returns null if not found. */
 export async function readBlobStream(
   pathname: string
 ): Promise<{ stream: ReadableStream; contentType: string } | null> {
   if (!hasBlobStorage()) return null;
 
-  const result = await get(pathname, { access: "private" });
+  const result = await get(pathname, { access: blobAccess() });
   if (!result || result.statusCode !== 200 || !result.stream) return null;
 
   return {
