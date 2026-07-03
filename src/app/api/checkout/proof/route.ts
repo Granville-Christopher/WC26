@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { getOrderByRef, updateOrder } from "@/lib/orders";
-import { hasBlobStorage, uploadPublicFile } from "@/lib/blob-storage";
+import { hasBlobStorage, uploadBlobFile } from "@/lib/blob-storage";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   let url: string;
   try {
     if (hasBlobStorage()) {
-      url = await uploadPublicFile(`payment-proofs/${safeRef}.${ext}`, buffer, file.type);
+      url = await uploadBlobFile(`payment-proofs/${safeRef}.${ext}`, buffer, file.type);
     } else {
       const filename = `${safeRef}.${ext}`;
       const dir = path.join(process.cwd(), "public", "payment-proofs");

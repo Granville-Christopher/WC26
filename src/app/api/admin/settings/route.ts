@@ -3,6 +3,9 @@ import { requireAdmin } from "@/lib/auth";
 import { readStore, writeStore } from "@/lib/store";
 import type { PaymentSettings, StoreData } from "@/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   if (!(await requireAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

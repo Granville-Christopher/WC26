@@ -34,7 +34,7 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
   } | null>(null);
 
   useEffect(() => {
-    fetch("/api/checkout")
+    fetch("/api/checkout", { cache: "no-store" })
       .then((r) => safeJson<{ payment?: PaymentSettings }>(r))
       .then((data) => {
         if (data.payment) {

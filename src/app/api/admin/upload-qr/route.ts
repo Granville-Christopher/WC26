@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { requireAdmin } from "@/lib/auth";
-import { hasBlobStorage, uploadPublicImage } from "@/lib/blob-storage";
+import { hasBlobStorage, uploadBlobFile } from "@/lib/blob-storage";
 
 export async function POST(request: Request) {
   if (!(await requireAdmin())) {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   if (hasBlobStorage()) {
     try {
-      const url = await uploadPublicImage(`payment-qr/${safeId}.${ext}`, buffer, file.type);
+      const url = await uploadBlobFile(`payment-qr/${safeId}.${ext}`, buffer, file.type);
       return NextResponse.json({ url });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Blob upload failed";

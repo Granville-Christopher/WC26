@@ -38,26 +38,39 @@ export async function listJsonBlobs<T>(prefix: string): Promise<T[]> {
   return items;
 }
 
-export async function uploadPublicImage(
+/**
+ * Uploads a file (image/PDF) to the private Blob store and returns a relative
+ * proxy URL that streams it back through our own API route. We use private
+ * access everywhere because a Blob store's access mode is fixed at creation —
+ * mixing public and private on one store is not possible.
+ */
+export async function uploadBlobFile(
   pathname: string,
   body: Buffer | ArrayBuffer,
   contentType: string
 ): Promise<string> {
-  const blob = await put(pathname, body, {
-    access: "public",
+  await put(pathname, body, {
+    access: "private",
     contentType,
     addRandomSuffix: false,
     allowOverwrite: true,
   });
-  return blob.url;
+  return `/api/blob/${pathname}`;
 }
 
-export async function uploadPublicFile(
-  pathname: string,
-  body: Buffer | ArrayBuffer,
-  contentType: string
-): Promise<string> {
-  return uploadPublicImage(pathname, body, contentType);
+/** Streams a private blob's contents. Returns null if not found. */
+export async function readBlobStream(
+  pathname: string
+): Promise<{ stream: ReadableStream; contentType: string } | null> {
+  if (!hasBlobStorage()) return null;
+
+  const result = await get(pathname, { access: "private" });
+  if (!result || result.statusCode !== 200 || !result.stream) return null;
+
+  return {
+    stream: result.stream,
+    contentType: result.blob?.contentType ?? "application/octet-stream",
+  };
 }
 
 export { STORE_BLOB_PATH };

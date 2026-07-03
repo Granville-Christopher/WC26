@@ -4,17 +4,23 @@ import { getMatchBySlug } from "@/lib/fixtures";
 import { saveOrder } from "@/lib/orders";
 import type { SavedOrder } from "@/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   const store = await readStore();
   const enabledMethods = store.payment.methods.filter((m) => m.enabled);
-  return NextResponse.json({
-    payment: {
-      currency: store.payment.currency,
-      supportEmail: store.payment.supportEmail,
-      checkoutNote: store.payment.checkoutNote,
-      methods: enabledMethods,
+  return NextResponse.json(
+    {
+      payment: {
+        currency: store.payment.currency,
+        supportEmail: store.payment.supportEmail,
+        checkoutNote: store.payment.checkoutNote,
+        methods: enabledMethods,
+      },
     },
-  });
+    { headers: { "Cache-Control": "no-store, max-age=0" } }
+  );
 }
 
 export async function POST(request: Request) {
