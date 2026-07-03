@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { FileUp, Loader2, CheckCircle, X } from "lucide-react";
+import { safeJson } from "@/lib/utils";
 import type { PaymentProof } from "@/types";
 
 function isImageType(contentType: string) {
@@ -63,22 +64,27 @@ export function ProofOfPaymentField({
     setUploading(true);
     setError("");
 
-    const form = new FormData();
-    form.append("orderRef", targetOrderRef);
-    form.append("file", file);
+    try {
+      const form = new FormData();
+      form.append("orderRef", targetOrderRef);
+      form.append("file", file);
 
-    const res = await fetch("/api/checkout/proof", { method: "POST", body: form });
-    const data = await res.json();
-    setUploading(false);
+      const res = await fetch("/api/checkout/proof", { method: "POST", body: form });
+      const data = await safeJson<{ error?: string; proof?: PaymentProof }>(res);
 
-    if (!res.ok) {
-      setError(data.error ?? "Upload failed. Please try again.");
-      return;
+      if (!res.ok || !data.proof) {
+        setError(data.error ?? `Upload failed (${res.status}). Please try again.`);
+        return;
+      }
+
+      setProof(data.proof);
+      clearFile();
+      onUploaded?.(data.proof);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
     }
-
-    setProof(data.proof);
-    clearFile();
-    onUploaded?.(data.proof);
   }
 
   if (proof) {
@@ -229,11 +235,15 @@ export function ProofOfPaymentInput({
 }
 
 export async function uploadProofForOrder(orderRef: string, file: File): Promise<PaymentProof | null> {
-  const form = new FormData();
-  form.append("orderRef", orderRef);
-  form.append("file", file);
-  const res = await fetch("/api/checkout/proof", { method: "POST", body: form });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.proof as PaymentProof;
+  try {
+    const form = new FormData();
+    form.append("orderRef", orderRef);
+    form.append("file", file);
+    const res = await fetch("/api/checkout/proof", { method: "POST", body: form });
+    if (!res.ok) return null;
+    const data = await safeJson<{ proof?: PaymentProof }>(res);
+    return data.proof ?? null;
+  } catch {
+    return null;
+  }
 }

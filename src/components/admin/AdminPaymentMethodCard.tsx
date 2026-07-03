@@ -47,27 +47,33 @@ export function AdminPaymentMethodCard({
   async function uploadQr(file: File) {
     setUploading(true);
     setUploadMsg("");
-    const form = new FormData();
-    form.append("file", file);
-    form.append("methodId", method.id);
-    const res = await fetch("/api/admin/upload-qr", { method: "POST", body: form });
-    const data = await res.json();
-    setUploading(false);
-    if (res.ok && data.url) {
-      onUpdate("qrCodeUrl", data.url);
-      setUploadMsg("QR uploaded.");
-    } else {
-      setUploadMsg(data.error ?? "Upload failed.");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("methodId", method.id);
+      const res = await fetch("/api/admin/upload-qr", { method: "POST", body: form });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        onUpdate("qrCodeUrl", data.url);
+        setUploadMsg("QR uploaded. Click \"Save payment settings\" to keep it.");
+      } else {
+        setUploadMsg(data.error ?? `Upload failed (${res.status}).`);
+      }
+    } catch (err) {
+      setUploadMsg(err instanceof Error ? err.message : "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
     }
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
+    <div className="rounded-2xl border border-white/10 bg-slate-900 p-4 sm:p-6">
       <div className="mb-4 flex items-center justify-between gap-4">
         <input
           value={method.label}
           onChange={(e) => onLabelChange(e.target.value)}
-          className="bg-transparent text-lg font-semibold outline-none"
+          className="min-w-0 flex-1 bg-transparent text-base font-semibold outline-none sm:text-lg"
         />
         <label className="flex shrink-0 items-center gap-2 text-sm">
           <input
@@ -130,7 +136,17 @@ export function AdminPaymentMethodCard({
                 }}
               />
             </label>
-            {uploadMsg && <p className="mt-2 text-xs text-emerald-400">{uploadMsg}</p>}
+            {uploadMsg && (
+              <p
+                className={`mt-2 text-xs ${
+                  uploadMsg.toLowerCase().includes("fail") || uploadMsg.toLowerCase().includes("error")
+                    ? "text-red-400"
+                    : "text-emerald-400"
+                }`}
+              >
+                {uploadMsg}
+              </p>
+            )}
             {method.details.qrCodeUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img

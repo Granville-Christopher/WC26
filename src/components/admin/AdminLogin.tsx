@@ -13,18 +13,23 @@ export default function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
 
-    setLoading(false);
-    if (!res.ok) {
-      setError("Invalid admin password");
-      return;
+      if (!res.ok) {
+        setError("Invalid admin password");
+        return;
+      }
+      onSuccess();
+    } catch {
+      setError("Could not sign in. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    onSuccess();
   }
 
   return (

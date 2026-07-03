@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { SECTION_IMAGES } from "@/data/home-images";
+import { safeJson } from "@/lib/utils";
 
 export function PlatinumRegisterForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -17,24 +18,29 @@ export function PlatinumRegisterForm() {
     setError("");
 
     const form = new FormData(e.currentTarget);
-    const res = await fetch("/api/platinum", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.get("name"),
-        email: form.get("email"),
-        company: form.get("company"),
-        phone: form.get("phone"),
-        message: form.get("message"),
-      }),
-    });
+    try {
+      const res = await fetch("/api/platinum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.get("name"),
+          email: form.get("email"),
+          company: form.get("company"),
+          phone: form.get("phone"),
+          message: form.get("message"),
+        }),
+      });
 
-    setLoading(false);
-    if (res.ok) {
-      setSubmitted(true);
-    } else {
-      const data = await res.json();
-      setError(data.error ?? "Something went wrong. Please try again.");
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await safeJson<{ error?: string }>(res);
+        setError(data.error ?? "Something went wrong. Please try again.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 

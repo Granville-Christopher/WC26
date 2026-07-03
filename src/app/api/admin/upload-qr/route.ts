@@ -35,10 +35,19 @@ export async function POST(request: Request) {
     }
   }
 
-  const filename = `${safeId}.${ext}`;
-  const dir = path.join(process.cwd(), "public", "payment-qr");
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), buffer);
-
-  return NextResponse.json({ url: `/payment-qr/${filename}` });
+  try {
+    const filename = `${safeId}.${ext}`;
+    const dir = path.join(process.cwd(), "public", "payment-qr");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, filename), buffer);
+    return NextResponse.json({ url: `/payment-qr/${filename}` });
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          "Image storage is not configured. On Vercel, link a Blob store (Storage → Blob) so BLOB_READ_WRITE_TOKEN is set, then try again. Alternatively, paste an image URL in the QR field.",
+      },
+      { status: 500 }
+    );
+  }
 }

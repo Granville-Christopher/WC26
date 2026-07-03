@@ -4,7 +4,7 @@ import { get, list, put } from "@vercel/blob";
 const STORE_BLOB_PATH = "cupvault/store.json";
 
 export function hasBlobStorage(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim() || process.env.VERCEL_OIDC_TOKEN?.trim());
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
 
 export async function readJsonBlob<T>(pathname: string): Promise<T | null> {

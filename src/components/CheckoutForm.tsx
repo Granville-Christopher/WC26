@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, CheckCircle, ArrowLeft } from "lucide-react";
-import { formatPrice, formatDate, formatTime } from "@/lib/utils";
+import { formatPrice, formatDate, formatTime, safeJson } from "@/lib/utils";
 import { PaymentDetails } from "@/components/PaymentDetails";
 import { ProofOfPaymentField, ProofOfPaymentInput, uploadProofForOrder } from "@/components/ProofOfPaymentField";
 import type { PaymentMethod, PaymentProof, PaymentSettings, WorldCupMatch, TierId } from "@/types";
@@ -35,11 +35,14 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
 
   useEffect(() => {
     fetch("/api/checkout")
-      .then((r) => r.json())
+      .then((r) => safeJson<{ payment?: PaymentSettings }>(r))
       .then((data) => {
-        setPayment(data.payment);
-        if (data.payment?.methods?.[0]) setMethodId(data.payment.methods[0].id);
-      });
+        if (data.payment) {
+          setPayment(data.payment);
+          if (data.payment.methods?.[0]) setMethodId(data.payment.methods[0].id);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -47,41 +50,52 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        matchSlug: match.slug,
-        tierId,
-        quantity,
-        customerName: name,
-        customerEmail: email,
-        customerPhone: phone,
-        paymentMethodId: methodId,
-      }),
-    });
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          matchSlug: match.slug,
+          tierId,
+          quantity,
+          customerName: name,
+          customerEmail: email,
+          customerPhone: phone,
+          paymentMethodId: methodId,
+        }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) {
-      setLoading(false);
-      setError(data.error ?? "Could not complete your order. Please try again.");
-      return;
-    }
+      const data = await safeJson<{
+        error?: string;
+        orderRef: string;
+        total: number;
+        paymentMethod: PaymentMethod;
+        checkoutNote: string;
+        supportEmail: string;
+      }>(res);
 
-    let proof: PaymentProof | undefined;
-    if (proofFile) {
-      const uploaded = await uploadProofForOrder(data.orderRef, proofFile);
-      if (!uploaded) {
-        setLoading(false);
-        setOrder(data);
-        setError("Order placed, but proof upload failed. You can upload it below.");
+      if (!res.ok || !data.orderRef) {
+        setError(data.error ?? "Could not complete your order. Please try again.");
         return;
       }
-      proof = uploaded;
-    }
 
-    setLoading(false);
-    setOrder({ ...data, proofOfPayment: proof });
+      let proof: PaymentProof | undefined;
+      if (proofFile) {
+        const uploaded = await uploadProofForOrder(data.orderRef, proofFile);
+        if (!uploaded) {
+          setOrder(data);
+          setError("Order placed, but proof upload failed. You can upload it below.");
+          return;
+        }
+        proof = uploaded;
+      }
+
+      setOrder({ ...data, proofOfPayment: proof });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not complete your order. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const selectedMethod = payment?.methods.find((m) => m.id === methodId);

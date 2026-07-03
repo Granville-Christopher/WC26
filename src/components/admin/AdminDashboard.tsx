@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { HOSPITALITY_TIERS } from "@/data/tiers";
 import { AdminPaymentMethodCard } from "@/components/admin/AdminPaymentMethodCard";
+import { safeJson } from "@/lib/utils";
 import type { PaymentMethod, PaymentSettings, PlatinumInquiry, SavedOrder, StoreData } from "@/types";
 
 interface AdminMatch {
@@ -44,38 +45,42 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [settingsRes, matchesRes, ordersRes] = await Promise.all([
-      fetch("/api/admin/settings"),
-      fetch("/api/admin/matches"),
-      fetch("/api/admin/orders"),
-    ]);
+    try {
+      const [settingsRes, matchesRes, ordersRes] = await Promise.all([
+        fetch("/api/admin/settings"),
+        fetch("/api/admin/matches"),
+        fetch("/api/admin/orders"),
+      ]);
 
-    if (settingsRes.status === 401) {
-      onLogout();
-      return;
+      if (settingsRes.status === 401) {
+        onLogout();
+        return;
+      }
+
+      const settings = await safeJson<StoreData>(settingsRes);
+      const matchData = await safeJson<{
+        matches: AdminMatch[];
+        defaults: Record<string, number>;
+      }>(matchesRes);
+
+      if (settings.payment) setPayment(settings.payment);
+      setLastSync(settings.lastFixtureSync ?? null);
+      setMatches(matchData.matches ?? []);
+      setDefaults(matchData.defaults ?? {});
+
+      if (ordersRes.ok) {
+        const ordersData = await safeJson<{
+          orders: SavedOrder[];
+          inquiries: PlatinumInquiry[];
+        }>(ordersRes);
+        setOrders(ordersData.orders ?? []);
+        setInquiries(ordersData.inquiries ?? []);
+      }
+    } catch {
+      setMessage("Failed to load admin data. Please refresh.");
+    } finally {
+      setLoading(false);
     }
-
-    const settings = (await settingsRes.json()) as StoreData;
-    const matchData = (await matchesRes.json()) as {
-      matches: AdminMatch[];
-      defaults: Record<string, number>;
-    };
-
-    setPayment(settings.payment);
-    setLastSync(settings.lastFixtureSync);
-    setMatches(matchData.matches);
-    setDefaults(matchData.defaults);
-
-    if (ordersRes.ok) {
-      const ordersData = (await ordersRes.json()) as {
-        orders: SavedOrder[];
-        inquiries: PlatinumInquiry[];
-      };
-      setOrders(ordersData.orders);
-      setInquiries(ordersData.inquiries);
-    }
-
-    setLoading(false);
   }, [onLogout]);
 
   useEffect(() => {
@@ -86,13 +91,18 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     if (!payment) return;
     setSaving(true);
     setMessage("");
-    const res = await fetch("/api/admin/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment }),
-    });
-    setSaving(false);
-    setMessage(res.ok ? "Payment settings saved." : "Failed to save.");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment }),
+      });
+      setMessage(res.ok ? "Payment settings saved." : "Failed to save.");
+    } catch {
+      setMessage("Failed to save.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function savePrices() {
@@ -115,33 +125,43 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         ? { updateDefaults: true, slug: "", prices, stock }
         : { slug: selectedSlug, prices, stock };
 
-    const res = await fetch("/api/admin/matches", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch("/api/admin/matches", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    setSaving(false);
-    if (res.ok) {
-      setMessage("Prices updated successfully.");
-      await load();
-    } else {
+      if (res.ok) {
+        setMessage("Prices updated successfully.");
+        await load();
+      } else {
+        setMessage("Failed to update prices.");
+      }
+    } catch {
       setMessage("Failed to update prices.");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function syncFixtures() {
     setSyncing(true);
     setMessage("");
-    const res = await fetch("/api/fixtures", { method: "POST" });
-    const data = await res.json();
-    setSyncing(false);
-    if (res.ok) {
-      setMessage(`Synced ${data.count} matches from live source.`);
-      setLastSync(data.syncedAt);
-      await load();
-    } else {
+    try {
+      const res = await fetch("/api/fixtures", { method: "POST" });
+      const data = await safeJson<{ count?: number; syncedAt?: string }>(res);
+      if (res.ok) {
+        setMessage(`Synced ${data.count ?? 0} matches from live source.`);
+        setLastSync(data.syncedAt ?? null);
+        await load();
+      } else {
+        setMessage("Fixture sync failed.");
+      }
+    } catch {
       setMessage("Fixture sync failed.");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -194,10 +214,10 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-white/10 bg-slate-900">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="text-xl font-bold">CupVault Admin</h1>
-            <p className="text-sm text-slate-400">Payment, pricing & live fixtures</p>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold sm:text-xl">CupVault Admin</h1>
+            <p className="truncate text-xs text-slate-400 sm:text-sm">Payment, pricing &amp; live fixtures</p>
           </div>
           <button
             onClick={async () => {
@@ -208,16 +228,16 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               });
               onLogout();
             }}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-slate-300 hover:bg-white/5"
+            className="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5 sm:px-4"
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-6 flex gap-2">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="mb-6 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:overflow-visible">
           {[
             { id: "payment" as const, label: "Payment", icon: CreditCard },
             { id: "prices" as const, label: "Ticket Prices", icon: DollarSign },
@@ -227,7 +247,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition sm:px-4 ${
                 tab === id
                   ? "bg-emerald-600 text-white"
                   : "bg-slate-800 text-slate-300 hover:bg-slate-700"
@@ -247,7 +267,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
         {tab === "payment" && (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
+            <div className="rounded-2xl border border-white/10 bg-slate-900 p-4 sm:p-6">
               <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
                 <Settings className="h-5 w-5 text-emerald-400" />
                 Checkout Settings
@@ -295,17 +315,17 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               />
             ))}
 
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={addPaymentMethod}
-                className="rounded-xl border border-white/10 px-4 py-2 text-sm hover:bg-white/5"
+                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm hover:bg-white/5"
               >
                 + Add payment method
               </button>
               <button
                 onClick={savePayment}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2 font-semibold hover:bg-emerald-500 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 font-semibold hover:bg-emerald-500 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save payment settings
@@ -315,7 +335,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         )}
 
         {tab === "prices" && (
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
+          <div className="rounded-2xl border border-white/10 bg-slate-900 p-4 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
               <Ticket className="h-5 w-5 text-emerald-400" />
               Ticket Tier Prices
@@ -388,11 +408,11 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         {tab === "orders" && (
           <div className="space-y-8">
             {orders.some((o) => o.proofOfPayment) && (
-              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6">
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-6">
                 <h2 className="mb-4 text-lg font-semibold text-amber-200">
                   Payment Proofs ({orders.filter((o) => o.proofOfPayment).length})
                 </h2>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {orders
                     .filter((o) => o.proofOfPayment)
                     .map((order) => (
@@ -434,7 +454,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             )}
 
-            <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
+            <div className="rounded-2xl border border-white/10 bg-slate-900 p-4 sm:p-6">
               <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
                 <ShoppingBag className="h-5 w-5 text-emerald-400" />
                 Ticket Orders ({orders.length})
@@ -504,7 +524,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               )}
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
+            <div className="rounded-2xl border border-white/10 bg-slate-900 p-4 sm:p-6">
               <h2 className="mb-4 text-lg font-semibold">Platinum Inquiries ({inquiries.length})</h2>
               {inquiries.length === 0 ? (
                 <p className="text-sm text-slate-400">No platinum registrations yet.</p>
@@ -540,7 +560,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         )}
 
         {tab === "sync" && (
-          <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
+          <div className="rounded-2xl border border-white/10 bg-slate-900 p-4 sm:p-6">
             <h2 className="mb-2 text-lg font-semibold">Live Fixture Sync</h2>
             <p className="mb-6 text-sm text-slate-400">
               Fixtures are fetched from the official openfootball World Cup 2026 schedule (mirrors
