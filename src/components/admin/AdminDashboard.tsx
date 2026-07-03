@@ -9,11 +9,12 @@ import {
   RefreshCw,
   Save,
   Settings,
+  ShoppingBag,
   Ticket,
 } from "lucide-react";
 import { HOSPITALITY_TIERS } from "@/data/tiers";
 import { AdminPaymentMethodCard } from "@/components/admin/AdminPaymentMethodCard";
-import type { PaymentMethod, PaymentSettings, StoreData } from "@/types";
+import type { PaymentMethod, PaymentSettings, PlatinumInquiry, SavedOrder, StoreData } from "@/types";
 
 interface AdminMatch {
   slug: string;
@@ -28,7 +29,7 @@ interface AdminMatch {
 }
 
 export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<"payment" | "prices" | "sync">("payment");
+  const [tab, setTab] = useState<"payment" | "prices" | "orders" | "sync">("payment");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -36,14 +37,17 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [payment, setPayment] = useState<PaymentSettings | null>(null);
   const [defaults, setDefaults] = useState<Record<string, number>>({});
   const [matches, setMatches] = useState<AdminMatch[]>([]);
+  const [orders, setOrders] = useState<SavedOrder[]>([]);
+  const [inquiries, setInquiries] = useState<PlatinumInquiry[]>([]);
   const [selectedSlug, setSelectedSlug] = useState<string>("__default__");
   const [lastSync, setLastSync] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [settingsRes, matchesRes] = await Promise.all([
+    const [settingsRes, matchesRes, ordersRes] = await Promise.all([
       fetch("/api/admin/settings"),
       fetch("/api/admin/matches"),
+      fetch("/api/admin/orders"),
     ]);
 
     if (settingsRes.status === 401) {
@@ -61,6 +65,16 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     setLastSync(settings.lastFixtureSync);
     setMatches(matchData.matches);
     setDefaults(matchData.defaults);
+
+    if (ordersRes.ok) {
+      const ordersData = (await ordersRes.json()) as {
+        orders: SavedOrder[];
+        inquiries: PlatinumInquiry[];
+      };
+      setOrders(ordersData.orders);
+      setInquiries(ordersData.inquiries);
+    }
+
     setLoading(false);
   }, [onLogout]);
 
@@ -207,6 +221,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           {[
             { id: "payment" as const, label: "Payment", icon: CreditCard },
             { id: "prices" as const, label: "Ticket Prices", icon: DollarSign },
+            { id: "orders" as const, label: "Orders & Leads", icon: ShoppingBag },
             { id: "sync" as const, label: "Live Fixtures", icon: RefreshCw },
           ].map(({ id, label, icon: Icon }) => (
             <button
@@ -367,6 +382,160 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save prices
             </button>
+          </div>
+        )}
+
+        {tab === "orders" && (
+          <div className="space-y-8">
+            {orders.some((o) => o.proofOfPayment) && (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6">
+                <h2 className="mb-4 text-lg font-semibold text-amber-200">
+                  Payment Proofs ({orders.filter((o) => o.proofOfPayment).length})
+                </h2>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {orders
+                    .filter((o) => o.proofOfPayment)
+                    .map((order) => (
+                      <div
+                        key={order.orderRef}
+                        className="overflow-hidden rounded-xl border border-white/10 bg-slate-900"
+                      >
+                        {order.proofOfPayment?.contentType.startsWith("image/") ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={order.proofOfPayment.url}
+                            alt={`Proof for ${order.orderRef}`}
+                            className="h-40 w-full bg-white object-contain"
+                          />
+                        ) : (
+                          <div className="flex h-40 items-center justify-center bg-slate-800 text-slate-400">
+                            PDF document
+                          </div>
+                        )}
+                        <div className="p-4 text-sm">
+                          <p className="font-mono text-xs text-emerald-400">{order.orderRef}</p>
+                          <p className="mt-1 font-medium">{order.customerName}</p>
+                          <p className="text-slate-400">{order.paymentMethodLabel}</p>
+                          <p className="mt-1 text-slate-500">
+                            {order.currency} {order.total.toLocaleString()}
+                          </p>
+                          <a
+                            href={order.proofOfPayment?.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-block text-xs font-semibold text-emerald-400 hover:underline"
+                          >
+                            Open full file →
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                <ShoppingBag className="h-5 w-5 text-emerald-400" />
+                Ticket Orders ({orders.length})
+              </h2>
+              {orders.length === 0 ? (
+                <p className="text-sm text-slate-400">No orders yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[900px] text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-left text-slate-400">
+                        <th className="pb-3 pr-4">Reference</th>
+                        <th className="pb-3 pr-4">Date</th>
+                        <th className="pb-3 pr-4">Customer</th>
+                        <th className="pb-3 pr-4">Match</th>
+                        <th className="pb-3 pr-4">Tickets</th>
+                        <th className="pb-3 pr-4">Total</th>
+                        <th className="pb-3 pr-4">Payment</th>
+                        <th className="pb-3">Proof</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order.orderRef} className="border-b border-white/5 align-top">
+                          <td className="py-3 pr-4 font-mono text-xs">{order.orderRef}</td>
+                          <td className="py-3 pr-4 whitespace-nowrap text-slate-300">
+                            {new Date(order.createdAt).toLocaleString()}
+                          </td>
+                          <td className="py-3 pr-4">
+                            <p className="font-medium">{order.customerName}</p>
+                            <p className="text-slate-400">{order.customerEmail}</p>
+                            {order.customerPhone && (
+                              <p className="text-slate-500">{order.customerPhone}</p>
+                            )}
+                          </td>
+                          <td className="py-3 pr-4">
+                            <p>{order.matchTitle}</p>
+                            <p className="text-slate-400">{order.matchDate}</p>
+                            <p className="text-slate-500">{order.venue}, {order.city}</p>
+                          </td>
+                          <td className="py-3 pr-4">
+                            {order.quantity}× {order.tierName}
+                          </td>
+                          <td className="py-3 pr-4 font-semibold">
+                            {order.currency} {order.total.toLocaleString()}
+                          </td>
+                          <td className="py-3 pr-4 text-slate-300">{order.paymentMethodLabel}</td>
+                          <td className="py-3">
+                            {order.proofOfPayment ? (
+                              <a
+                                href={order.proofOfPayment.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-emerald-400 hover:underline"
+                              >
+                                View proof
+                              </a>
+                            ) : (
+                              <span className="text-slate-500">Not uploaded</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
+              <h2 className="mb-4 text-lg font-semibold">Platinum Inquiries ({inquiries.length})</h2>
+              {inquiries.length === 0 ? (
+                <p className="text-sm text-slate-400">No platinum registrations yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {inquiries.map((inquiry) => (
+                    <div
+                      key={inquiry.id}
+                      className="rounded-xl border border-white/10 bg-slate-800/50 p-4 text-sm"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold">{inquiry.name}</p>
+                          <p className="text-slate-400">{inquiry.email}</p>
+                          {inquiry.phone && <p className="text-slate-500">{inquiry.phone}</p>}
+                          {inquiry.company && <p className="text-slate-500">{inquiry.company}</p>}
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {new Date(inquiry.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      {inquiry.message && (
+                        <p className="mt-3 rounded-lg bg-slate-900/80 p-3 text-slate-300">
+                          {inquiry.message}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

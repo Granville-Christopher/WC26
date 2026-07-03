@@ -1,5 +1,5 @@
 import "server-only";
-import { get, put } from "@vercel/blob";
+import { get, list, put } from "@vercel/blob";
 
 const STORE_BLOB_PATH = "cupvault/store.json";
 
@@ -26,6 +26,18 @@ export async function writeJsonBlob(pathname: string, data: unknown): Promise<vo
   });
 }
 
+export async function listJsonBlobs<T>(prefix: string): Promise<T[]> {
+  if (!hasBlobStorage()) return [];
+
+  const { blobs } = await list({ prefix });
+  const items: T[] = [];
+  for (const blob of blobs) {
+    const item = await readJsonBlob<T>(blob.pathname);
+    if (item) items.push(item);
+  }
+  return items;
+}
+
 export async function uploadPublicImage(
   pathname: string,
   body: Buffer | ArrayBuffer,
@@ -38,6 +50,14 @@ export async function uploadPublicImage(
     allowOverwrite: true,
   });
   return blob.url;
+}
+
+export async function uploadPublicFile(
+  pathname: string,
+  body: Buffer | ArrayBuffer,
+  contentType: string
+): Promise<string> {
+  return uploadPublicImage(pathname, body, contentType);
 }
 
 export { STORE_BLOB_PATH };

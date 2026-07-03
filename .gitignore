@@ -44,6 +44,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# customer data (stored in Vercel Blob in production)
+/data/orders.json
+/data/inquiries.json
+
+/public/payment-proofs/*
+!/public/payment-proofs/.gitkeep
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

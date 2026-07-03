@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { formatPrice, formatDate, formatTime } from "@/lib/utils";
 import { PaymentDetails } from "@/components/PaymentDetails";
-import type { PaymentMethod, PaymentSettings, WorldCupMatch, TierId } from "@/types";
+import { ProofOfPaymentField, ProofOfPaymentInput, uploadProofForOrder } from "@/components/ProofOfPaymentField";
+import type { PaymentMethod, PaymentProof, PaymentSettings, WorldCupMatch, TierId } from "@/types";
 
 interface CheckoutPageProps {
   match: WorldCupMatch;
@@ -20,13 +21,16 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [order, setOrder] = useState<{
     orderRef: string;
     total: number;
     paymentMethod: PaymentMethod;
     checkoutNote: string;
     supportEmail: string;
+    proofOfPayment?: PaymentProof;
   } | null>(null);
 
   useEffect(() => {
@@ -41,6 +45,7 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     const res = await fetch("/api/checkout", {
       method: "POST",
@@ -57,8 +62,26 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
     });
 
     const data = await res.json();
+    if (!res.ok) {
+      setLoading(false);
+      setError(data.error ?? "Could not complete your order. Please try again.");
+      return;
+    }
+
+    let proof: PaymentProof | undefined;
+    if (proofFile) {
+      const uploaded = await uploadProofForOrder(data.orderRef, proofFile);
+      if (!uploaded) {
+        setLoading(false);
+        setOrder(data);
+        setError("Order placed, but proof upload failed. You can upload it below.");
+        return;
+      }
+      proof = uploaded;
+    }
+
     setLoading(false);
-    if (res.ok) setOrder(data);
+    setOrder({ ...data, proofOfPayment: proof });
   }
 
   const selectedMethod = payment?.methods.find((m) => m.id === methodId);
@@ -76,6 +99,11 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
 
           <div className="mt-8 text-left">
             <PaymentDetails method={order.paymentMethod} />
+            <ProofOfPaymentField
+              orderRef={order.orderRef}
+              existingProof={order.proofOfPayment}
+              onUploaded={(proof) => setOrder({ ...order, proofOfPayment: proof })}
+            />
             {order.checkoutNote && (
               <p className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-slate-600">{order.checkoutNote}</p>
             )}
@@ -118,6 +146,11 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-6">
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="font-semibold text-slate-900">Your details</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -181,8 +214,9 @@ export function CheckoutForm({ match, tierId }: CheckoutPageProps) {
                   </label>
                 ))}
                 {selectedMethod && (
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-4">
                     <PaymentDetails method={selectedMethod} />
+                    <ProofOfPaymentInput file={proofFile} onFileChange={setProofFile} />
                   </div>
                 )}
               </div>

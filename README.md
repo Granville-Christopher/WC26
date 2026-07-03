@@ -61,4 +61,4 @@ npm start
 
 Change `ADMIN_PASSWORD` before deploying. Payment details, pricing, and stock are managed via the admin UI.
 
-On Vercel, create a **Blob store** (Storage → Blob) and link it to the project so `BLOB_READ_WRITE_TOKEN` is set. Admin saves then persist in Blob instead of the ephemeral filesystem. Locally, data still uses `data/store.json` unless you add the token to `.env.local`.
+On Vercel, create a **Blob store** (Storage → Blob) and link it to the project so `BLOB_READ_WRITE_TOKEN` is set. Admin saves, checkout orders, and platinum inquiries persist in Blob instead of the ephemeral filesystem. Locally, data still uses `data/store.json` unless you add the token to `.env.local`.

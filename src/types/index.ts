@@ -120,3 +120,45 @@ export interface CheckoutOrder {
   customerPhone?: string;
   paymentMethodId: string;
 }
+
+export type OrderStatus = "pending" | "paid" | "cancelled";
+
+export interface PaymentProof {
+  url: string;
+  filename: string;
+  contentType: string;
+  uploadedAt: string;
+}
+
+export interface SavedOrder {
+  orderRef: string;
+  createdAt: string;
+  status: OrderStatus;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  matchSlug: string;
+  matchTitle: string;
+  matchDate: string;
+  venue: string;
+  city: string;
+  tierId: TierId;
+  tierName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  currency: string;
+  paymentMethodId: string;
+  paymentMethodLabel: string;
+  proofOfPayment?: PaymentProof;
+}
+
+export interface PlatinumInquiry {
+  id: string;
+  createdAt: string;
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
+  message?: string;
+}

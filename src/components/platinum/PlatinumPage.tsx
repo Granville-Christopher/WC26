@@ -3,14 +3,39 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { SECTION_IMAGES } from "@/data/home-images";
 
 export function PlatinumRegisterForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError("");
+
+    const form = new FormData(e.currentTarget);
+    const res = await fetch("/api/platinum", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.get("name"),
+        email: form.get("email"),
+        company: form.get("company"),
+        phone: form.get("phone"),
+        message: form.get("message"),
+      }),
+    });
+
+    setLoading(false);
+    if (res.ok) {
+      setSubmitted(true);
+    } else {
+      const data = await res.json();
+      setError(data.error ?? "Something went wrong. Please try again.");
+    }
   }
 
   if (submitted) {
@@ -30,18 +55,47 @@ export function PlatinumRegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
       <h2 className="text-lg font-bold text-slate-900">Register Interest</h2>
+      {error && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
-        <input required placeholder="Full name" className="rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087]" />
-        <input required type="email" placeholder="Email" className="rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087]" />
-        <input placeholder="Company (optional)" className="rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087] sm:col-span-2" />
-        <input type="tel" placeholder="Phone" className="rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087] sm:col-span-2" />
+        <input
+          required
+          name="name"
+          placeholder="Full name"
+          className="rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087]"
+        />
+        <input
+          required
+          name="email"
+          type="email"
+          placeholder="Email"
+          className="rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087]"
+        />
+        <input
+          name="company"
+          placeholder="Company (optional)"
+          className="rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087] sm:col-span-2"
+        />
+        <input
+          name="phone"
+          type="tel"
+          placeholder="Phone"
+          className="rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087] sm:col-span-2"
+        />
       </div>
       <textarea
+        name="message"
         placeholder="Tell us about your ideal World Cup experience..."
         rows={4}
         className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#003087]"
       />
-      <button type="submit" className="fifa-btn-primary w-full rounded-lg py-3.5 text-sm font-bold">
+      <button
+        type="submit"
+        disabled={loading}
+        className="fifa-btn-primary flex w-full items-center justify-center gap-2 rounded-lg py-3.5 text-sm font-bold disabled:opacity-50"
+      >
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         Submit Registration
       </button>
     </form>
